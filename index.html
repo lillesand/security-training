@@ -1,0 +1,1053 @@
+<!doctype html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8">
+
+		<title>Sikkerhet i Webapplikasjoner</title>
+
+		<meta name="description" content="Web application security">
+		<meta name="author" content="Jøran Lillesand, Ståle Pettersen">
+
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<link rel="stylesheet" href="css/reveal.min.css">
+		<link rel="stylesheet" href="css/theme/default.css" id="theme">
+        <link rel="stylesheet/less" href="css/custom.less"/>
+
+		<!-- For syntax highlighting -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<!-- If the query includes 'print-pdf', include the PDF print sheet -->
+		<script>
+			if( window.location.search.match( /print-pdf/gi ) ) {
+				var link = document.createElement( 'link' );
+				link.rel = 'stylesheet';
+				link.type = 'text/css';
+				link.href = 'css/print/pdf.css';
+				document.getElementsByTagName( 'head' )[0].appendChild( link );
+			}
+		</script>
+
+		<!--[if lt IE 9]>
+		<script src="lib/js/html5shiv.js"></script>
+		<![endif]-->
+	</head>
+
+	<body>
+		<div class="reveal">
+			<div class="slides">
+                <section id="intro">
+                    <section data-background="img/marvel-superheroes.jpg">
+                        <h1 style="background-color: black; margin-top: 350px; display: inline-block; padding: 20px;">Security in web applications</h1>
+                    </section>
+
+                    <section data-background="img/newsflash.png"></section>
+
+                    <section data-background-color="white" class="inverted">
+                        <img src="img/staale.jpg" style="float: right; width: 30%; border:none; box-shadow:none;"/>
+                        <div style="width: 70%;">
+                            <h2>About me</h2>
+                            <ul style="list-style: none">
+                                <li>Ståle Pettersen</li>
+                                <li class="fragment">Utvikler i 12 år</li>
+                                <li class="fragment">Sikkerhetsmann i 8 år</li>
+                            </ul>
+                        </div>
+
+                    </section>
+
+                    <section>
+                        <h2>Mål</h2>
+                        <ul>
+                            <li>Lære om de mest vanlige feilene</li>
+                            <li class="fragment">Oppdage når du havner i DangerZone™</li>
+                            <li class="fragment">Gi dere hands-on erfaring!</li>
+                        </ul>
+
+                        <aside class="notes">
+                            <ul>
+                                <li>DangerZone = Typisk når en håndterer brukerinput</li>
+                                <li>En del engelske ord… beklager, jeg er lite kreativ, evt. den ikke påviste dysleksien.. og vil ikke forvirre med dårlig oversettelser</li>
+                            </ul>
+                        </aside>
+                    </section>
+
+                    <section>
+                        <h2>Hvorfor?</h2>
+                        <ul>
+                            <li>Systemer er komplekse, for få tenker på sikkerhet</li>
+                            <li class="fragment">Applikasjoner vi utvikler blir angrepet hver uke</li>
+                            <li class="fragment">Antall angrep vil øke i fremtiden…</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2>To måter å lære sikkerhet på</h2>
+                        <ul>
+                            <li class="fragment">
+                                <h3>The Security Expert™ Way</h3>
+                                <h4>I pwn you!</h4>
+                            </li>
+                            <li class="fragment"><h3>Den pragmatiske måten</h3></li>
+                        </ul>
+
+                        <aside class="notes">
+                            <ul>
+                                <li>Everything is hacked, i pwn you! (pwn = own = eier = hacker)</li>
+                                <li>Courses and certificats that dont understand everything thats going on.</li>
+                                <li>The pragmatic way is good! Attackers usually pick low hanging fruit.</li>
+                            </ul>
+                        </aside>
+                    </section>
+
+                    <section>
+                        <h1>OWASP TOP 10</h1>
+                        <h3><a href="https://www.owasp.org/index.php/Top_10_2013-Top_10" target="_blank">Such great</a></h3>
+
+                        <aside class="notes">
+                            <ul>
+                                <li>10 mest kritiske applikasjonsfeilene som gjøres</li>
+                                <li>Risikobasert</li>
+                                <li>God start hvis en dekker Top 10</li>
+                                <li>Angripere er late (ekskludert målrettede angrep)</li>
+                            </ul>
+                        </aside>
+                    </section>
+
+                    <section>
+                        <h2>Hva vil vi se nærmere på?</h2>
+                        <ol>
+                            <li>SQL Injections</li>
+                            <li>Data i forskjellige kontekster</li>
+                            <li>Cross Site Scripting</li>
+                            <li>The Invisible Security Barrier</li>
+                            <li>Cross Site Request Forgery</li>
+                            <li>Security Headers</li>
+                            <li>Insecure Object Reference</li>
+                            <li>Resource Starvation</li>
+                        </ol>
+                    </section>
+
+                    <section>
+                        <h2>Rules of engagement</h2>
+                        <ul>
+                            <li>Spør spør spør!</li>
+                            <li class="fragment">Finnes ingen dumme spørsmål, bare jeg som har en dårlig presentasjon!</li>
+                            <li class="fragment">Si i fra hvis dere trenger pauser</li>
+                        </ul>
+                        <aside class="notes">
+                            Ønsker å forbedre presentasjonen, så spør og rop ut!
+                            First attack up: SQL-injection
+                        </aside>
+                    </section>
+                </section>
+                <section id="sql-injection">
+
+                    <section data-background="img/spiderman.jpg">
+                        <h1 style="color: darkred">SQL Injection</h1>
+                    </section>
+
+                    <section class="live-example">
+                        <h2>Eksempel</h2>
+
+
+                        <form class="example-form">
+                            <div>
+                                <label for="sqli-username">Username</label>
+                                <input type="text" id="sqli-username"/>
+                            </div>
+                            <div>
+                                <label for="sqli-password">Password</label>
+                                <input type="password" id="sqli-password"/>
+                            </div>
+                        </form>
+
+
+
+                        <ul>
+                            <li class="fragment">
+                                Bruker skriver inn brukernavn og passord og logger inn
+
+                                <pre><code data-trim class="sample-area sql">
+                                SELECT * FROM User
+WHERE Username="{username}" AND Password="{password}";
+                                </code></pre>
+                            </li>
+
+                            <li class="fragment">Hva skjer dersom brukeren skrive inn brukernavnet <strong>"</strong> ?</li>
+                            <li class="fragment">Hmm spennende..! Kan vi utnytte dette?</li>
+                            <li class="fragment">-- og # marker at det er en kommentar…</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h1>Demo!</h1>
+                        <a href="http://www.qwitter.com/" target="_blank">qwitter.com</a>!
+
+                        <aside class="notes">
+                            <ol>
+                                <li>Vis at vanlig pålogging virker</li>
+                                <li>Vis fnutt (') gir kræsj - forklar feilmelding</li>
+                                <li>Åpne SQLen i textmate, vis hvordan du deduserer angrepsstreng (<code>alice'#</code>)</li>
+                            </ol>
+                        </aside>
+                    </section>
+
+                    <section>
+                        <h2>Nastiness rating</h2>
+                        <ul>
+                            <li>Så og si en perfekt 10</li>
+                            <li class="fragment">Kan omgå tilgangskontroll</li>
+                            <li class="fragment">Kan lese andre sine data</li>
+                            <li class="fragment">Kan slette data</li>
+                            <li class="fragment">Kan gi tilgang til database-serverene</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h1>Nastiness demo!</h1>
+                        <a href="http://www.qwitter.com/" target="_blank">qwitter</a>!
+
+                        <aside class="notes">
+                            <ol>
+                                <li><code>./sqlmap.py -u "http://www.qwitter.com/?showFromUser=1"</code></li>
+                                <li><code>./sqlmap.py -u "http://www.qwitter.com/?showFromUser=1" --tables</code></li>
+                                <li><code>./sqlmap.py -u "http://www.qwitter.com/?showFromUser=1" --tables -D qwitter -T users --dump</code></li>
+                            </ol>
+                        </aside>
+                    </section>
+
+                    <section>
+                        <h2>Hvordan unngå det?</h2>
+                        <ul>
+                            <li>Stol på og bruk rammevkeret!</li>
+                            <li class="fragment">Bruk aldri, aldri, <strong>ALDRI</strong> String konkatinering for SQL spørringer</li>
+                            <li class="fragment">Aldri. Gjør. Det!</li>
+                            <li class="fragment">
+                                Prepared statement er din venn
+
+                                <pre><code data-trim class="java">
+                                    jdbcTemplate.query("SELECT * FROM User WHERE Username=? AND Password=?",
+    username, password);
+                                </code></pre>
+                            </li>
+
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2>Hibernate</h2>
+                        <ul>
+                            <li>Hibernate beskytter deg <strong>ikke</strong> mot injection</li>
+                            <li>Hibernate er som alle andre ORM rammeverk, hjelper deg å skrive SQL</li>
+                            <li>Faktisk, HQL injection er stort sett det samme som SQL injection</li>
+                        </ul>
+
+                        <aside class="notes">
+                            <ul>
+                                <li>HTML: &lt;s>BEKK&lt;/s></li>
+                                <li>JS: &lt;script>alert(/pwned/)&lt;/script></li>
+                            </ul>
+                        </aside>
+                    </section>
+
+
+
+                </section>
+                <section id="xss">
+
+                    <section data-background="img/batman.jpg">
+                        <h1 style="font-size: 300px; float:right; margin-right: 150px; margin-top: -200px; background-color: black; padding: 20px; display:inline;">XSS</h1>
+                        <img src="img/xss-pwned.png" class="fragment">
+                    </section>
+
+                    <section class="live-example">
+                        <h2>Eksempel</h2>
+
+                        <form class="example-form">
+                            <div>
+                                <label for="xss-search">Search</label>
+                                <input type="text" id="xss-search"/>
+                                <button>Go!</button>
+                            </div>
+
+
+                            <div class="attack-zone">
+<p>
+  Searched for:
+  <span class="term">{term}</span>
+</p>
+                            </div>
+                        </form>
+
+                        <ul>
+                            <li class="fragment">
+                                Når brukeren søker, vil søketerm og søkeresultater bli printet
+
+                                <pre><code data-trim class="sample-area xml">
+                                </code></pre>
+                            </li>
+
+                            <li class="fragment">Men hva hvis vi søker etter HTML..?</li>
+
+                            <li class="fragment">Eller JavaScript…</li>
+                        </ul>
+
+                        <aside class="notes">
+                            <ul>
+                                <li>HTML: &lt;s>BEKK&lt;/s> eller &lt;maruquee></li>
+                                <li>JS: &lt;script>alert(/pwned/)&lt;/script></li>
+                                <li></li>
+                                <li>NB! Lite hack her: Kjører <code>eval</code> på script-body, derfor denne faktisk fungerer i Chrome. Se <code>executeScript</code> i xss-example.js</li>
+                            </ul>
+                        </aside>
+                    </section>
+
+                    <section>
+                        <h2>Hvem bryr seg…</h2>
+
+                        <ul>
+                            <li>Hvem bryr seg om en alert-boks?</li>
+                            <li class="fragment">Hva hvis vi kan stjele en brukersesjon?</li>
+                            <li class="fragment">Eller opprette en ny administrator bruker?</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h1>Demo!</h1>
+                        Hils på <a href="http://qwitter.com/" target="_blank">Qwitter</a>!
+
+                        <aside class="notes">
+                            NB: Firefox!!
+                                <ul>
+                                <li>Qwitter.com forside</li>
+                                <li>Skriv inn noe tull i en qwit</li>
+                                <li>Vis hvordan dette skrives tilbake i siden</li>
+                                <li>Åpne en editor og lim inn boksen der det ble skrevet ut</li>
+                                <li>What happens if we input enter <code>"</code>?</li>
+                                <li>Hva om vi dytter inn "&gt; &lt;h1&gt;hallo&lt;/h1&gt;</li>
+                                <li>Hva om vi dytter inn "&gt; &lt;script&gt;alert(1)&lt;/script&gt;</li>
+                                <li>Fungerer ikke i Chrome… men i Firefox. Hvorfor?</li>
+                            </ul>
+
+                        </aside>
+                    </section>
+
+                    <section>
+                        <h2>Tre typer XSS</h2>
+
+                        <ul>
+                            <li>Reflected</li>
+                            <li class="fragment">Persistent</li>
+                            <li class="fragment">DOM based</li>
+                        </ul>
+
+                        <aside class="notes">
+                            Which one did we just see?
+                        </aside>
+                    </section>
+
+                    <section>
+                        <h2>Demo!</h2>
+                        Return to <a href="http://www.qwitter.com/" target="_blank">qwitter</a>!
+
+                        <aside class="notes">
+                            Qwitter! <b>DON'T USE SINGLE QUOTES!!!</b>
+                            <ol>
+                                <li>Open qwitter in two browsers</li>
+                                <li>Log in to one</li>
+                                <li>Show how one browser can send alerts that are shown to the other</li>
+                                <li>https://jvl.io/public/zerg.js TODO! What iz thiz?</li>
+                                <li>Preetty bad for business..!</li>
+                            </ol>
+                        </aside>
+                    </section>
+
+                    <section>
+                        <h2>Nastiness rating</h2>
+                        <ul>
+                            <li>Så og si en perfekt 10</li>
+                            <li class="fragment">Kan stjele sesjoner</li>
+                            <li class="fragment">Kan gjøre requester på vegne av andre brukere</li>
+                            <li class="fragment">Kan stjele alle dataene på nettsiden</li>
+                            <li class="fragment">Kan totalforandre utseende på nettsiden</li>
+                            <li class="fragment">Kan omgå CSRF-beskyttelse</li>
+                            <li class="fragment">Kan angripe klientmaskiner (exploite nettleser eller plugins)</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2>Hvordan unngå?</h2>
+                        <ul>
+                            <li>Bruk rammeverk!</li>
+                            <li class="fragment">Hvordan støtter <strong>ditt</strong> rammeverk dette?</li>
+                            <li class="fragment">Hvis ikke… bruker du feil rammeverk</li>
+                            <li class="fragment">…eller du skriver ut data i kontekster som er vanskelige å beskytte</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2>Hvordan unngå i (jsp)?</h2>
+                                <pre><code class="xml">
+&lt;%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %&gt;
+
+&lt;c:out value="${name}"/&gt;
+                                </code></pre>
+                    </section>
+
+                    <section>
+                        <h2>Vær oppmerksom på eksotiske kontekster!</h2>
+                        <pre><code class="xml">
+&lt;script&gt;
+    var age = &lt;c:out value="${age}"/&gt;;
+&lt;/script&gt;
+                        </code></pre>
+
+                        <aside class="notes">
+                            Plutselig er, ' et kontrolltegn.<br>
+                            TL;DR: If you're outputting somewhere that is a bit… weird, do a double take!<br>
+                            Like don't output userinput in HTML templates from the server that JS reads! (Impossible to protect)
+                        </aside>
+                    </section>
+
+                    <section>
+                        <h2>Hvordan unngå det i JavaScript?</h2>
+                        <ul>
+                        <li>JavaScript (jQuery)
+                                <pre><code class="js">
+$('#name').text(name);
+                                </code></pre>
+                        </li>
+                        <li class="fragment">Mustache (safe by default!)
+                        <pre><code class="handlebars">
+Name: {{name}}
+                        </code></pre>
+                        </li>
+                            <li class="fragment">Angular (safe by default!)
+                        <pre><code class="handlebars">
+&lt;span ng-bind="name">&lt;/span>
+                        </code></pre>
+                            </li>
+                        </ul>
+
+                        <aside class="notes">
+                            <ul>
+                                <li>Ikke bruk jQuery's $.html, eller .append etc med data du ikke stoler på, XSS heaven!</li>
+                                <li>TODO: Lenke til jQuery fuzzer output? https://github.com/kozmic/js-lib-fuzzer</li>
+                                <li>Next up: Contexts.</li>
+                            </ul>
+                        </aside>
+                    </section>
+
+                </section>
+                <section id="crossing-contexts">
+                    <section data-background="img/hellboy.jpg">
+                        <h1 style="width: 100%; margin-left: -150px;">Trøbbel banker på døra når data endrer kontekst</h1>
+                    </section>
+
+                    <section>
+                        <h2>Advarsel: Kan bli litt komplisert…</h2>
+                    </section>
+
+                    <section>
+                        <h2>Kontekster wtf?</h2>
+                        <ol>
+                            <li>HTML input</li>
+                            <li>JavaScript</li>
+                            <li>HTTP</li>
+                            <li>Java</li>
+                            <li>HQL</li>
+                            <li>Java</li>
+                            <li>JSON</li>
+                            <li>HTTP</li>
+                            <li>Java</li>
+                            <li>SQL</li>
+                        </ol>
+                    </section>
+
+                    <section class="tiny-code">
+                        <h2>Kode vs data</h2>
+                        <ul>
+                            <li>Forskjellige kontekster skiller på data og kode på forskjellige måter</li>
+                            <li class="fragment"><em>Metategn</em> brukes for å skille data og kode</li>
+                            <li class="fragment">Metategn varierer mellom forskjellige språk</li>
+                            <li class="fragment">
+                                Examples:
+                                <ul>
+                                    <li>JSON: <code>"</code>, <code>'</code></li>
+                                    <li>XML: <code>"</code>, <code>&lt;</code>, <code>&gt;</code></li>
+                                    <li>SQL: <code>"</code>, <code>'</code></li>
+                                    <li>HTTP (headers): <code>⏎</code></li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2>Trygt?</h2>
+                        <pre><code>
+{
+    username: '&lt;script>alert(1)&lt;/script>',
+    name: 'Evil hacker'
+}
+                        </code></pre>
+                    </section>
+
+                    <section>
+                        <h2>Inputvalidering</h2>
+                        <ul>
+                            <li>Første forsøk er å stoppe data på vei inn: <i>Vi ønsker ikke at folk skal angripe oss!</i></li>
+                            <li class="fragment" data-fragment-index="1"><span>Hva om gyldig input inneholder metategn?</span> <br/>
+                                <span class="fragment" data-fragment-index="2">Stakkars John O'Hara!</span></li>
+                            <li class="fragment">Inputvalidering er for å garantere at dataene inn i systemet er gyldig i forhold til forretningslogikk!</li>
+                        </ul>
+
+                        <img class="fragment" data-fragment-index="2" src="img/leprechaun.png" style="float: left; transform: rotate(330deg); margin-top: -50px; margin-left: -50px;">
+
+                        <aside class="notes">
+                            <ul>
+                                <li>Input for sikkerhet: Stoppe DoS, sjekke at bilde er et bilde osv.</li>
+                            </ul>
+                        </aside>
+                    </section>
+
+                    <section class="tiny-code">
+                        <h2>Output encoding</h2>
+
+                        <ul>
+                            <li>Encode output i konteksten de skrives ut i!</li>
+                            <li class="fragment">
+                                Eksempel (XML):
+                                <ul>
+                                    <li><code>&lt;</code> – <code>&amp;lt;</code></li>
+                                    <li><code>&gt;</code> – <code>&amp;gt;</code></li>
+                                </ul>
+                            </li>
+
+                            <li class="fragment">Vanskeligere å få til enn det høres ut som! <br>
+                                <span style="margin-left: 20px;">… så du burde ikke gjøre det selv</span></li>
+                            <li class="fragment">Twitter, Facebook og Google har alle gjort feil her</li>
+                            <li class="fragment"><strong>Bruk bibliotekene sine innebygde funksjoner.</strong></li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2>Trygt?</h2>
+                        <pre><code>
+{
+    username: '&lt;script>alert(1)&lt;/script>',
+    name: 'Evil hacker'
+}
+                        </code></pre>
+
+                        <aside class="notes">
+                            <ul>
+                                <li>JSON-kontekst: Trygt! (En burde encode, dessverre gjør ikke så mange rammeverk dette). IE kan fort lures til å tro det er HTML.</li>
+                                <li>HTML-kontekst: Ikke trygt</li>
+                            </ul>
+                        </aside>
+                    </section>
+
+                    <section>
+                        <h2>Andre interessante kontekster</h2>
+                        <ul>
+                            <li>SQL</li>
+                            <li>HTML</li>
+                            <li>Javascript</li>
+                            <li>Operating systems</li>
+                            <li>JavaScript code blocks</li>
+                            <li>LDAP</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2>Nastiness rating</h2>
+                        <ul>
+                            <li>Avhenger av kontekst</li>
+                            <li class="fragment">Kan være ganske ille (LDAP injections etc)</li>
+                            <li class="fragment">Shell injection. Gjør vondt.</li>
+                            <li class="fragment">Obskure kontekster er ofte vanskelige å forstå
+                            <ul class="fragment">
+                                <li>URL param leses av XSL på serversiden, skrives ut i HTML body i en Javascript kontekst</li>
+                            </ul>
+                            </li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2>Hvordan unngå</h2>
+                        <ul>
+                            <li>BE VERY AFRAID</li>
+                            <li class="fragment">Vær alltid oppmerksom på konteksten du er i når du skriver ut data</li>
+                            <li class="fragment">Bruk rammeverk eller bibliotek</li>
+                            <li class="fragment">Bruk cheat sheets
+                                <ul>
+                                    <li><a href="https://owasp.org/XSS_Cheat_Sheet">OWASP XSS Cheat Sheet</a></li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </section>
+                </section>
+                <section id="csrf">
+                    <section data-background="img/hulk.jpg">
+                        <h1 style="font-size: 300px; margin-right: -350px;">CSRF</h1>
+                    </section>
+
+                    <section>
+                        <h2>CSRF… what?</h2>
+                        <ul>
+                            <li>Cross Site</li>
+                            <li class="fragment">Request</li>
+                            <li class="fragment">Forgery</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h1>Demo!</h1>
+                        <a href="http://qwitter.com" target="_blank">Qwitter redder dagen!</a>
+                        <br>
+                        <button id="csrf-demo-button-quick">Click me!</button>
+                        <div class="csrf-zone" style="height: 50%;"></div>
+                    </section>
+
+                    <section>
+                        <h1>Demo!</h1>
+                        <br>
+                        <button id="csrf-demo-button-slow">Replay!</button>
+                        <div class="csrf-zone" style="height: 50%;"></div>
+                    </section>
+
+                    <section>
+                        <h1>What!?</h1>
+                        <br>
+                        <a href="/js/csrf.html" target="_blank">What's that page</a>!
+                    </section>
+
+                    <section>
+                        <h1>Demo!</h1>
+                        <br>
+                        <button id="csrf-demo-button-kittens">Click me for cute kittens!!</button>
+                        <div class="csrf-zone" style="height: 50%;"></div>
+                    </section>
+
+                    <section>
+                        <h2>Big deal…</h2>
+                        <ul>
+                            <li>Hvem bryr seg om han karen som lager qwitter-meldinger fra sin powerpoint?</li>
+                            <li class="fragment">Men dette kan gjøres fra en hvilken som helst nettside…</li>
+                            <li class="fragment">Hva om du får en epost, og klikker på en link og plutselig er det en ny administratorbruker i kjernesystemet…?</li>
+                            <li class="fragment">Krever at angrepet er målrettet</li>
+                        </ul>
+                    </section>
+
+
+                    <section>
+                        <h2>Hvordan unngå!</h2>
+                        <ul>
+                            <li>Stol på rammeverket…</li>
+                            <li class="fragment">Forutsatt at rammeverket støtter det.</li>
+                            <li class="fragment">… noe alt for få Java rammeverk ikke gjør.</li>
+                        </ul>
+                    </section>
+
+                    <section data-background="img/superman.jpg">
+                        <h1>Synchronizer Token Pattern!</h1>
+                    </section>
+
+                    <section>
+                        <h2>Huh… synchronizer token pattern?</h2>
+                        <ol>
+                            <li class="fragment">Opprett random token som du lagrer på sesjonen til brukeren</li>
+                            <li class="fragment">Legg tokenet i alle forms</li>
+                            <li class="fragment">Verifiser på serveren for alle operasjoner med sideeffekter (POST, PUT osv)</li>
+                        </ol>
+                    </section>
+
+                    <section>
+                        <h2>Hvorfor fungerer det?</h2>
+                        <div class="fragment">
+                            Same origin policy:
+                            <blockquote cite="wikipedia (adapted)">
+                                Only permit scripts running on pages originating from the same site
+                                to access each other's DOM with no specific restrictions, but prevents access to DOM on different sites.<br>
+                            </blockquote>
+                            <span style="float:right">-Wikipedia (adapted)</span>
+                        </div>
+
+                        <aside class="notes">
+                            <ul>
+                                <li>Kan ikke manipulere iframe fra et annet domeneCan not manipulate iframe from other domains</li>
+                                <li>Kan ikke gjøre AJAX requester på tvers av domener (!CORS)</li>
+                                <li>Kan sende request, men får ikke lest responsen</li>
+                            </ul>
+                        </aside>
+                    </section>
+
+                    <section>
+                        <h1>Demo!</h1>
+                        <a href="https://www.qwitter.com" target="_blank">Qwitter.com</a> (actually secure this time)!
+
+                        <aside class="notes">
+                            <ul>
+                                <li>Enable CSRF-token in, link: <a href="http://qwitter.com/admin.php">qwitter.com/admin.php</a></li>
+                            </ul>
+                        </aside>
+                    </section>
+                </section>
+                <section id="invisible-security-barrier">
+                    <section data-background="img/ironman.jpg">
+                        <h1>Den usynlige<br> Sikkerhetsbarrieren</h1>
+                    </section>
+
+                    <section>
+                        <img src="img/invisible-barrier.gif" style="height: 200%;width: 200%;"/>
+                    </section>
+
+                    <section data-background-color="white">
+                        <svg style="width: 310px; height: 499px; left: 200px; position: absolute;">
+                            <image width="310" height="499" xlink:href="img/invisible-security-barrier.png" />
+                        </svg>
+                        <svg style="width: 310px; height: 499px; left: 200px; position: absolute;" class="fragment">
+                            <line x1="0" y1="275" x2="300" y2="275" style="stroke:rgb(255,0,0);stroke-width:2"/>
+                        </svg>
+                    </section>
+
+                    <section>
+                        <h2>Du kan ikke stole på klienten :(</h2>
+                        <ul>
+                            <li>… selv om du skrev den selv!</li>
+                            <li class="fragment">Hvis data kommer fra klienten, anta at du ikke kan stole på de.</li>
+                            <li class="fragment">Validering på klienten er kun for brukervennlighet.</li>
+                            <li class="fragment">Validering for gyldig input skjer på serveren!</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h1>Demo!</h1>
+                        <p>Mørbanken må da ha ting på stell, <a href="http://morbank.com" target="_blank">MorBank.com</a>…</p>
+
+                        <aside class="notes">
+                            Change account number, no validation on backend.
+                        </aside>
+                    </section>
+
+                    <section>
+                        <h2>Skjer hele tiden…</h2>
+
+                        <ul>
+                            <li>Uventet data fra klineten kan forbigå sikkerhetssjekker</li>
+                            <li class="fragment">Pris skjult i et hidden input felt eller cookie</li>
+                            <li class="fragment">Cookie <code>superuser=true</code></li>
+                            <li class="fragment">Flysete: Endre seterad i POST-requesten som bekrefter bestillingen, first class!</li>
+                        </ul>
+
+                        <aside class="notes">
+                            <ul>
+                                <li>Total price in hidden inpu.</li>
+                                <li>Authorization should never be on the client… just to show/hide links</li>
+                                <li>Price is safe, but think a seat is a seat</li>
+                                <li>Others: Wifi signup page at unnamed hotel in India. You could choose your own price (and norwegian guy did!)</li>
+                            </ul>
+                        </aside>
+                    </section>
+
+                    <section>
+                        <h2>Hvordan unngå?</h2>
+                        <ul>
+                            <li>Ikke stol på klienten!</li>
+                            <li class="fragment">Din klient er som alle andre API-er, en <em>kan ikke</em> stole på de.</li>
+                            <li class="fragment">Verifiser input og sjekk at alle enum-verdier er gyldige</li>
+                        </ul>
+                    </section>
+
+                </section>
+                <section id="security-headers">
+                    <section data-background="img/tinfoil-hat.jpg">
+                        <h1 style="margin: -300px 57% auto 0; color: pink; padding:20px; background-color: black" class="heading">
+                            Security Headers
+                        </h1>
+                    </section>
+
+                    <section>
+                        <h2>Hva er de?</h2>
+                        <ul>
+                            <li>Sikkerhetsinstrukser du kan sende til nettleseren</li>
+                            <li class="fragment">Øker sikkerheten (sikkerhet i flere lag)</li>
+                            <li class="fragment">… men de løser ikke alle sikkerhetsproblemer</li>
+                            <li class="fragment">Du må fortsatt skrive sikker kode!</li>
+                        </ul>
+
+                        <aside class="notes">
+                            This is kind of advanced, so I'm putting it in here so you've heard of them. Some are really advanced, others you should just turn on.
+                        </aside>
+                    </section>
+
+                    <section>
+                        <h2>HTTP Strict Transport Security (HSTS)</h2>
+<pre><code data-trim class="http">
+    Strict-Transport-Security: max-age=31536000; preload
+</code></pre>
+                        <ul>
+                            <li class="fragment">Last aldri denne nettsiden over HTTP de neste 31536000 sekundene!</li>
+                            <li class="fragment">Bruk alltid HTTPS (selv på første request med preload, <strong>4real</strong>!)</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2>X frame options</h2>
+<pre><code data-trim class="http">
+    X-Frame-Options: deny
+</code></pre>
+                        <ul>
+                            <li>Tillat aldri at denne siden lever i en iframe</li>
+                            <li>Stopper mange angrep, som Clickjacking</li>
+                            <li>Bruk den!</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2>XSS protection filter</h2>
+<pre><code data-trim class="http">
+    X-XSS-Protection:1; mode=block
+</code></pre>
+                        <ul>
+                            <li class="fragment">Skrur på XSS filter i nettlesere</li>
+                            <li class="fragment">Stopper de mest opplagte XSS-angrepene</li>
+                        </ul>
+
+                        <aside class="notes">
+                            Default on in some, but not all, browsers.
+                        </aside>
+                    </section>
+
+                    <section>
+                        <h1>Demo</h1>
+                        <a href="https://www.facebook.com" target="_blank">Facebook.com</a>
+                    </section>
+
+                    <section>
+                        <h1>… og mange flere</h1>
+                        <a href="http://lmgtfy.com/?q=security+headers" target="_blank">Highly googleable!</a>
+                    </section>
+
+                    <section>
+                        <h2>Hvordan ta de i bruk?</h2>
+                        <ul>
+                            <li data-fragment-index="1">I applikasjonen (typisk i et response filter)</li>
+                            <li data-fragment-index="1">… eller i en reverse proxy (nginx, Apache, BIG-IP)</li>
+                            <li class="fragment">Bruk de alltid i nye applikasjoner!</li>
+                        </ul>
+
+                        <aside class="notes">
+                            Always turn on in new apps, as they're usually easy to introduce in small apps, but hard in larger (difficult to know if you're gonna break som edge case feature)
+                        </aside>
+                    </section>
+
+                    <section>
+                        <h1>… men vent! There's one more thing!</h1>
+                    </section>
+
+                    <section>
+                        <h2>Cookie security!</h2>
+
+<pre><code data-trim class="http">
+Set-Cookie: _bekkid_session=value;Path=/;Secure;HttpOnly
+Set-Cookie: BEKKID_JSESSIONID=other_value;Path=/;Secure;HttpOnly
+</code></pre>
+                        <ul>
+                            <li class="fragment"><em>Secure</em>: kan kun sendes over HTTPS</li>
+                            <li class="fragment"><em>HttpOnly</em>: kan ikke leses av JavaScript</li>
+                        </ul>
+
+                        <aside class="notes">
+                            Secure: makes sure that the cookie will never be sent over an unencrypted channel (e.g. wifi)<br>
+                            HttpOnly: mitigates risk of stolen cookie in case of xss vulnerability. Stolen cookie is BAD.
+                        </aside>
+                    </section>
+
+                    <section>
+                        <h2>Cookie security: hvordan?</h2>
+                        <pre><code data-trim class="java">
+Cookie cookie = new Cookie("value", value);
+cookie.setMaxAge(ONE_MONTH);
+cookie.setVersion(1);
+cookie.setHttpOnly(true);
+cookie.setSecure(true);
+                            </code></pre>
+                        … eller tilsvarende i ditt favorittrammeverk!
+                    </section>
+                </section>
+                <section id="insecure-object-reference">
+                    <section data-background="img/alien.jpg">
+                        <h1 style="margin: -300px 59% auto 0; color: yellowgreen; font-size: 110px; text-align: left;" class="heading">
+                            <span>Insecure</span> <span>Object</span> <span>Reference</span>
+                        </h1>
+                    </section>
+
+                    <section>
+                        <h2>What?</h2>
+                        <blockquote cite="OWASP">
+                            A direct object reference occurs when a developer exposes a reference to an internal implementation object, such as a file, directory, or database key. Without an access control check or other protection, attackers can manipulate these references to access unauthorized data.
+                        </blockquote>
+                        <span style="float:right">-OWASP Top 10</span>
+                    </section>
+
+                    <section>
+                        <h2>Som disse eksemplene:</h2>
+                        <ul class="no-list" style="width:100%">
+                            <li><pre>www.example.org/reader.php?file=financial_report_2014.pdf</pre></li>
+                            <li class="fragment" data-fragment-index="1"><pre>www.example.org/reader.php?file=<span style="color: red;">../../etc/passwd</span></pre></li>
+                        </ul>
+                        <h2 class="fragment" data-fragment-index="2" style="margin-top:1em;">Eller som disse har gjort:</h2>
+                        <ul>
+                            <li class="fragment" data-fragment-index="2">www.bankofamerica.com/account/908090827645</li>
+                            <li class="fragment" data-fragment-index="2">www.disney.com/earnings/Q2_2015.pdf</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h1>Demo!</h1>
+                        <p>Kan <a href="http://morbank.com" target="_blank">MørBank.com</a> være sårbar for dette…?</p>
+
+                        <aside class="notes">
+                            <ol>
+                                <li>Logg inn og gå inn på kontodetaljer, endre ID i url-en</li>
+                            </ol>
+                        </aside>
+                    </section>
+
+                    <section>
+                        <h2>Nastiness rating</h2>
+                        <ul>
+                            <li>Ganske ille!</li>
+                            <li class="fragment">Enkelt å finne, enkelt å misbruke</li>
+                            <li class="fragment">Å beskytte data fra andre brukere er viktig (Kenneth?)!</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2>Hvordan unngå</h2>
+                        <ul>
+                            <li>Ser så enkelt ut (og det er det!)</li>
+                            <li class="fragment">… the devil is in the details</li>
+                            <li class="fragment">Disse feilene er ofte i obskure parametere, eller rett foran øynene dine!</li>
+                            <li class="fragment">Fort gjort å glemme et sted!</li>
+                        </ul>
+                    </section>
+
+                    <section data-background="img/yoda-white.jpg">
+                        <div style="background-color: lightgreen; padding: 40px; transform: rotate(15deg); border-radius: 20px; opacity: 0.8;">
+                            <h2 style="color: dimgray">Whenever you access an object</h2>
+                            <h2 style="color: dimgray; margin-bottom: 0">… be extra careful you must!</h2>
+                        </div>
+                    </section>
+
+                </section>
+                <section id="resource-starvation">
+                    <section data-background="img/deadpool-pee.jpg">
+                        <h1 style="margin-top: 300px; background-color: black; padding: 20px;">Resource Starvation</h1>
+                    </section>
+
+                    <section>
+                        <h2>Hva er det?</h2>
+                        <ul>
+                            <li>Super trege ressurser/tjenester!</li>
+                            <li class="fragment">Kan bli brukt til å holde/bruke på ressurser (threads, cpu, memory, …)</li>
+                            <li class="fragment"><em>En</em> treg ressurs kan ta ned hele applikasjonen</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2>Nastiness rating</h2>
+                        <ul>
+                            <li>Medium</li>
+                            <li class="fragment">Enkel å utnytte!</li>
+                            <li class="fragment">Påvirker kun applikasjonen mens angrepet pågår</li>
+                            <li class="fragment">Kan håndteres når angrep oppstår, eller i ettertid</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2>Hvordan unngå?</h2>
+                        <ul>
+                            <li>Duhh… unngå trege ressurser</li>
+                            <li class="fragment">Rate limiting, semaphores</li>
+                            <li class="fragment">Typisk svakhat som mange har!</li>
+                        </ul>
+                    </section>
+                </section>
+
+                <section id="outro">
+                    <section data-background="img/wonderwoman.jpg">
+                        <h1 class="heading" style="margin: -300px 59% auto 0; font-size: 120px; text-align: left; width: 70%;">
+                            <span>Oppsummering</span>
+                        </h1>
+                    </section>
+
+                    <section>
+                        <h2>Nok prating… Hva burde du vite?</h2>
+                        <ul>
+                            <li class="fragment">Bli kjent med de klassiske feilene</li>
+                            <li class="fragment">Ha alltid sikkerhet i bakhodet</li>
+                            <li class="fragment">Er du i tvil, spør!</li>
+                        </ul>
+                    </section>
+
+                    <section data-background="img/ugly-batmen.jpg">
+                        <h1 class="heading" style="font-size: 120px; text-align: right;">
+                            <span>That's all!</span>
+                        </h1>
+                    </section>
+                </section>
+
+			</div>
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.min.js"></script>
+		<script src="js/lesscss.min.js"></script>
+
+
+		<script>
+
+			// Full list of configuration options available here:
+			// https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				controls: false,
+				progress: false,
+				history: true,
+				center: true,
+
+				theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+				transition: Reveal.getQueryHash().transition || 'default', // default/cube/page/concave/zoom/linear/fade/none
+
+				// Parallax scrolling
+				// parallaxBackgroundImage: 'https://s3.amazonaws.com/hakim-static/reveal-js/reveal-parallax-1.jpg',
+				// parallaxBackgroundSize: '2100px 900px',
+
+				// Optional libraries used to extend on reveal.js
+				dependencies: [
+					{ src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+					{ src: 'lib/js/lodash.min.js'},
+					{ src: 'lib/js/underscore.string.min.js', callback: function() { _.mixin(_.str.exports());}},
+					{ src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/highlight/highlight.js', callback: function() { hljs.initHighlightingOnLoad(); } },
+					{ src: 'js/utils.js'},
+					{ src: 'js/sqli-example.js'},
+					{ src: 'js/xss-example.js'},
+					{ src: 'js/csrf-example.js'},
+
+                    { src: 'plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+					{ src: 'plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+				]
+			});
+
+		</script>
+
+	</body>
+</html>
